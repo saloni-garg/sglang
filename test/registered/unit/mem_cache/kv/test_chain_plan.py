@@ -422,3 +422,36 @@ class TestChainPlan(CustomTestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class TestPlacement(CustomTestCase):
+    """Where a layout places floats and which ends it compacts: never whether
+    one exists."""
+
+    def test_only_the_ends_a_layout_needs_are_compacted(self):
+        # The float grows by 5 and has no room in place; compacting the up
+        # end (10 holes) opens room below it. The down end has no holes and
+        # no demand: compacting it changes nothing, so it is left as it is.
+        up = _band("up", "up", 1, num_pages=40, min_page=0, low=0, high=20, live=10)
+        mid = _band(
+            "mid", "float", 1, num_pages=40, min_page=1, low=20, high=24, live=4
+        )
+        down = _band(
+            "down", "down", 1, num_pages=40, min_page=1, low=24, high=40, live=16
+        )
+        chain = _chain((up, mid, down), 40)
+        demands = {"mid": 5}
+        self.assertIsNone(plan(chain, demands, NO_MOVE))
+        self.assertEqual(plan(chain, demands, FLUSH_ENDS).flush, ("up", "down"))
+        found = first_plan(chain, demands)
+        self.assertEqual((found.step, found.flush), (FLUSH_ENDS, ("up",)))
+
+    def test_minimal_compaction_never_loses_a_layout(self):
+        for chain, demands, _ in _instances(9, 2000):
+            found = first_plan(chain, demands)
+            self.assertEqual(found is not None, feasible(chain, demands))
+            if found is None or found.step == NO_MOVE:
+                continue
+            full = plan(chain, demands, found.step)
+            self.assertIsNotNone(full)
+            self.assertLessEqual(set(found.flush), set(full.flush))

@@ -4698,7 +4698,9 @@ class Scheduler(
         forward_done = self.device_module.Event()
         forward_done.record(stream=stream)
         with self.device_module.stream(self.schedule_stream):
-            self.token_to_kv_pool_allocator.storage.record_forward(
+            kv_storage_of(
+                self.req_to_token_pool, self.token_to_kv_pool_allocator
+            ).record_forward(
                 forward_done,
                 written_tokens=written_tokens,
                 token_writes_unknown=token_writes_unknown,
@@ -5195,9 +5197,9 @@ class Scheduler(
             isinstance(result, GenerationBatchResult)
             and result.unified_forward_done is not None
         ):
-            self.token_to_kv_pool_allocator.storage.retire_forward(
-                result.unified_forward_done
-            )
+            kv_storage_of(
+                self.req_to_token_pool, self.token_to_kv_pool_allocator
+            ).retire_forward(result.unified_forward_done)
         # Flush async trace ops here: in overlap mode this CPU work runs while
         # the next batch's GPU forward is in flight, giving free overlap.
         flush_trace_batch(batch.reqs)

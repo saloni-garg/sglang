@@ -157,7 +157,7 @@ class RunnerIds:
         self._call_spaces: Optional[Dict[str, IdSpace]] = None
         if self.is_translating:
             alloc = token_to_kv_pool_allocator
-            plan = None if alloc.storage is None else alloc.storage.plan
+            plan = alloc.plan
             drafts = (
                 set()
                 if plan is None or plan.fused_draft is None
